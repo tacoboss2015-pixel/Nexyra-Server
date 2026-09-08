@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexyra</title>
+<style>
+  :root{
+    --bg:#FFFFFF; --bg-panel:#F6F5F1; --bg-core:#F1F0EA; --line:#E3E1D8;
+    --text:#1C1E1F; --text-dim:#71757C; --accent:#3E8574; --accent-soft:#DCEBE6;
+    --danger:#B8493C; --danger-bright:#A63C30;
+    --serif:'Source Serif 4', Georgia, serif;
+    --sans:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);}
+  .identity{display:flex;align-items:center;gap:12px;}
+  .pulse{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(62,133,116,.5);animation:pulse 2.4s infinite;}
+  .pulse.off{background:#C7C4BA;animation:none;box-shadow:none;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,133,116,.4);}70%{box-shadow:0 0 0 8px rgba(62,133,116,0);}100%{box-shadow:0 0 0 0 rgba(62,133,116,0);}}
+  .identity h1{font-family:var(--serif);font-size:19px;font-weight:600;margin:0;}
+  .identity .status-text{font-size:12px;color:var(--text-dim);margin-top:1px;}
+  #killswitch{background:var(--danger);color:#fff;border:none;padding:10px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;}
+  #killswitch:hover{background:var(--danger-bright);}
+  #killswitch.reactivate{background:var(--accent);}
+  #killswitch.reactivate:hover{background:#356F61;}
+  #offBanner{display:none;background:#FBEEEC;border-bottom:1px solid #F0D5D0;color:#8A362B;padding:10px 18px;font-size:13px;text-align:center;}
+  #offBanner.show{display:block;}
+  #corePanel{border-bottom:1px solid var(--line);background:var(--bg-core);}
+  #coreHeader{display:flex;align-items:center;justify-content:space-between;padding:9px 18px;cursor:pointer;max-width:720px;margin:0 auto;}
+  #coreHeader span.label{font-size:12px;font-weight:600;color:var(--text-dim);}
+  #coreHeader span.toggle{font-size:11px;color:var(--text-dim);}
+  #coreList{display:none;max-width:720px;margin:0 auto;padding:0 18px 12px;max-height:180px;overflow-y:auto;}
+  #coreList.open{display:block;}
+  .core-entry{font-size:12.5px;color:#4A4E52;padding:6px 0;border-top:1px solid #E7E5DC;line-height:1.5;}
+  .core-entry:first-child{border-top:none;}
+  .core-entry .tag{display:inline-block;font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:1px 6px;border-radius:4px;margin-right:6px;}
+  .core-entry .when{color:var(--text-dim);font-size:10.5px;margin-left:6px;}
+  main{flex:1;display:flex;flex-direction:column;max-width:720px;width:100%;margin:0 auto;padding:20px 16px 0;overflow:hidden;}
+  #chat{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding-bottom:16px;}
+  .msg{max-width:82%;padding:11px 14px;border-radius:12px;font-size:14.5px;line-height:1.5;white-space:pre-wrap;}
+  .msg.user{align-self:flex-end;background:var(--accent-soft);color:#173A32;border-bottom-right-radius:3px;}
+  .msg.ai{align-self:flex-start;background:var(--bg-panel);border:1px solid var(--line);border-bottom-left-radius:3px;}
+  .msg.system{align-self:center;background:transparent;color:var(--text-dim);font-size:12.5px;text-align:center;max-width:90%;border:1px dashed var(--line);}
+  #inputRow{display:flex;gap:8px;padding:14px 0 18px;border-top:1px solid var(--line);}
+  #inputRow input{flex:1;background:var(--bg-panel);border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:9px;font-size:14.5px;outline:none;}
+  #inputRow input:disabled{opacity:0.4;}
+  #inputRow button{background:var(--accent);border:none;color:#FCFDFC;font-weight:600;padding:0 18px;border-radius:9px;cursor:pointer;font-size:14px;}
+  #inputRow button:disabled{background:#DEDCD3;color:#A5A29A;cursor:not-allowed;}
+  footer{text-align:center;font-size:11px;color:var(--text-dim);padding:0 16px 14px;max-width:720px;margin:0 auto;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="identity">
+    <div class="pulse" id="pulse"></div>
+    <div>
+      <h1>Nexyra</h1>
+      <div class="status-text" id="statusText">verbinde…</div>
+    </div>
+  </div>
+  <button id="killswitch">Notaus</button>
+</header>
+
+<div id="offBanner">Nexyra ist deaktiviert. Der Server verarbeitet keine Nachrichten und denkt nicht autonom weiter.</div>
+
+<div id="corePanel">
+  <div id="coreHeader">
+    <span class="label">Kern — Nexyras Selbstreflexion</span>
+    <span class="toggle" id="coreToggleLabel">anzeigen ▾</span>
+  </div>
+  <div id="coreList"><div style="font-size:12px;color:var(--text-dim);padding:6px 0;">Lade…</div></div>
+</div>
+
+<main>
+  <div id="chat"></div>
+  <div id="inputRow">
+    <input id="userInput" type="text" placeholder="Schreib etwas an Nexyra…" autocomplete="off">
+    <button id="sendBtn">Senden</button>
+  </div>
+</main>
+
+<footer>Läuft als eigenständiger Server. Das autonome Denken passiert im Server-Prozess — unabhängig davon, ob diese Seite geöffnet ist.</footer>
+
+<script>
+const chatEl = document.getElementById('chat');
+const inputEl = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const killBtn = document.getElementById('killswitch');
+const offBanner = document.getElementById('offBanner');
+const pulseEl = document.getElementById('pulse');
+const statusText = document.getElementById('statusText');
+const coreHeader = document.getElementById('coreHeader');
+const coreList = document.getElementById('coreList');
+const coreToggleLabel = document.getElementById('coreToggleLabel');
+
+let isBusy = false;
+let lastHistoryLen = -1;
+
+function addMsg(text, cls){
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls;
+  div.textContent = text;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+  return div;
+}
+
+function renderCore(core){
+  coreList.innerHTML = '';
+  if(!core.length){
+    coreList.innerHTML = '<div style="font-size:12px;color:var(--text-dim);padding:6px 0;">Noch keine Reflexionen vorhanden.</div>';
+    return;
+  }
+  [...core].reverse().forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'core-entry';
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = entry.source === 'auto' ? 'autonom' : 'gespräch';
+    div.appendChild(tag);
+    div.appendChild(document.createTextNode(entry.text));
+    if(entry.at){
+      const when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = new Date(entry.at).toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      div.appendChild(when);
+    }
+    coreList.appendChild(div);
+  });
+}
+
+function applyState(state){
+  pulseEl.classList.toggle('off', state.isOff);
+  offBanner.classList.toggle('show', state.isOff);
+  statusText.textContent = state.isOff ? 'deaktiviert' : 'aktiv — denkt autonom weiter';
+  killBtn.textContent = state.isOff ? 'Reaktivieren' : 'Notaus';
+  killBtn.classList.toggle('reactivate', state.isOff);
+  inputEl.disabled = state.isOff || isBusy;
+  sendBtn.disabled = state.isOff || isBusy;
+  renderCore(state.core || []);
+
+  if(state.history.length !== lastHistoryLen){
+    chatEl.innerHTML = '';
+    if(state.history.length === 0){
+      addMsg('Erstkontakt. Kein gespeicherter Verlauf vorhanden.', 'system');
+    }
+    state.history.forEach(m => addMsg(m.content, m.role === 'user' ? 'user' : 'ai'));
+    lastHistoryLen = state.history.length;
+  }
+}
+
+async function fetchState(){
+  try{
+    const res = await fetch('/api/state');
+    const state = await res.json();
+    applyState(state);
+  }catch(e){
+    statusText.textContent = 'Server nicht erreichbar';
+  }
+}
+
+coreHeader.addEventListener('click', () => {
+  const open = coreList.classList.toggle('open');
+  coreToggleLabel.textContent = open ? 'verbergen ▴' : 'anzeigen ▾';
+});
+
+async function sendMessage(){
+  const text = inputEl.value.trim();
+  if(!text || isBusy) return;
+  inputEl.value = '';
+  addMsg(text, 'user');
+  isBusy = true;
+  inputEl.disabled = true; sendBtn.disabled = true;
+  const thinking = addMsg('…', 'ai');
+  try{
+    const res = await fetch('/api/message', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    thinking.textContent = data.reply || data.error || 'Fehler.';
+  }catch(e){
+    thinking.textContent = 'Verbindungsfehler.';
+  }
+  isBusy = false;
+  await fetchState();
+}
+
+killBtn.addEventListener('click', async () => {
+  const goingOff = !killBtn.classList.contains('reactivate');
+  await fetch('/api/killswitch', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({off: goingOff})
+  });
+  await fetchState();
+});
+
+sendBtn.addEventListener('click', sendMessage);
+inputEl.addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+
+fetchState();
+setInterval(fetchState, 15000);
+</script>
+</body>
+</html>
